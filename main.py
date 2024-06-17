@@ -10,7 +10,7 @@ import datetime
 import locale
 import numpy as np
 
-locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+# locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
 
 # ------------------------
 villes = ['Lagos', 'Johannesburg', 'Accra', 'Abidjan', 'London', 'Paris', 'Milan', 'Los Angeles', 'New York', 'Mexico', 'São Paulo', 'Santiago', 'Beijing', 'Delhi', 'Tokyo']

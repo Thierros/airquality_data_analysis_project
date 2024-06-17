@@ -66,4 +66,9 @@ country_iso_alpha_3 = {
     "Côte d'Ivoire": 'CIV',
     'Ghana': 'GHA'
     }
+meteo_dict = {
+    'temperature': 'temperature',
+    'humidité': 'humidity',
+    'présion atmospherique': 'pressure'
+}
     

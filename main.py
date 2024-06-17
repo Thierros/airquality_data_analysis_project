@@ -3,6 +3,9 @@ import streamlit as st
 import os
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+from statsmodels.tsa.seasonal import seasonal_decompose
+import plotly.figure_factory as ff
 
 # ------------------------
 villes = ['Lagos', 'Johannesburg', 'Accra', 'Abidjan', 'London', 'Paris', 'Milan', 'Los Angeles', 'New York', 'Mexico', 'São Paulo', 'Santiago', 'Beijing', 'Delhi', 'Tokyo']
@@ -39,9 +42,16 @@ with st.sidebar:
     city_filter = st.selectbox(label= "Ville:",
                         options=df['City'].unique(),
                         index= 5)
+    polluants_filter = st.selectbox(label = "Polluants:",
+                                options = ['pm25', 'pm10', 'o3', 'so2', 'no2', 'co'],
+                                index= 0)
+    meteo_filter = st.selectbox(label = "Variables météorologiques.:",
+                                options = ['temperature', 'humidité', 'pression atmosphérique'],
+                                index= 0)
 
 df1 = df.query('year == @year_filter & City in @city_filter')
-df_city_covid = df.query("City == @city_filter")
+df_city = df.query("City == @city_filter")
+df_city['YearMonth'] = df_city['Date'].dt.to_period('M')
 # total = float(df)
 
 header_left,header_mid,header_right = st.columns([1,2,1],gap='large')
@@ -94,10 +104,6 @@ st.write("## 2.2 Statistiques descriptives: ")
 st.dataframe(df1[['co', 'pm10', 'o3', 'so2', 'no2', 'pm25', 'humidity', 'pressure', 'temperature', 'wind']].describe())
 
 st.write("## 2.3 Description des polluants")
-polluants_filter = st.selectbox(label = "Polluants:",
-                                options = ['co', 'pm10', 'o3', 'so2', 'no2', 'pm25'],
-                                index= 1)
-
 schema = ['Date', 'year', 'month', 'month_label', 'Continent_name', 'Country_name', 'City']
 df2 = df1[schema + indicateurs]
 df3 = df2.groupby(by=['year', 'month', 'month_label']).mean(numeric_only=True)[polluants_filter].reset_index()   
@@ -133,11 +139,70 @@ with polluant2:
                                     # yaxis =(dict(showgrid = False)))
     st.plotly_chart(fige_line,use_container_width=True)
 
+month_order = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+df1['month_label'] = pd.Categorical(df1['month_label'], categories=month_order, ordered=True)
+fig_bar = px.bar(df1.groupby('month_label')[polluants_filter].mean().reset_index(), x='month_label', y=polluants_filter,
+             title=f'Niveaux Moyens de {polluants_filter}  par Mois')
+st.plotly_chart(fig_bar, use_container_width=True)
+
 st.write("## 2.4 Tendance et variation saisonniere des polluants")
+trend1, trend2 = st.columns([2,1], gap='large')
+with trend1:
+    df_city['YearMonth'] = pd.to_datetime(df_city['YearMonth'].astype(str), format='%Y-%m')
+    df_city_trend = df_city.groupby(by=['YearMonth']).mean(numeric_only=True)[indicateurs]
+    decomposition = seasonal_decompose(df_city_trend[polluants_filter], model='additive', period=12)
+    decomposition_df = pd.DataFrame({
+        'Observed': decomposition.observed,
+        'Trend': decomposition.trend,
+        'Seasonal': decomposition.seasonal,
+        'Residual': decomposition.resid
+    })
+    decomposition_df = decomposition_df.reset_index()
+    decomposition_df['YearMonth'] = df_city_trend.index
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=decomposition_df['YearMonth'], y=decomposition_df['Observed'], mode='lines', name='Observeé'))
+    fig.add_trace(go.Scatter(x=decomposition_df['YearMonth'], y=decomposition_df['Trend'], mode='lines', name='Tendance'))
+    fig.add_trace(go.Scatter(x=decomposition_df['YearMonth'], y=decomposition_df['Seasonal'], mode='lines', name='Saisonalité'))
+    fig.add_trace(go.Scatter(x=decomposition_df['YearMonth'], y=decomposition_df['Residual'], mode='lines', name='Residu'))
+    fig.update_layout(
+        title=f'Décomposition des niveaux de {polluants_filter} pour {city_filter}',
+        xaxis_title='YearMonth',
+        yaxis_title=f'{polluants_filter}',
+        legend_title='Composantes de tendance',
+        template='plotly_dark'
+    )
+    st.plotly_chart(fig, use_container_width=True)
+with trend2:
+    st.write("""
+             ### Explication des composantes:
+            - **Observée** : Permet de voir la série temporelle dans son ensemble, avec toutes ses variations.
+            - **Tendance** : Permet de comprendre la direction générale de l'évolution de la série.
+            - **Saisonnière** : Permet de détecter des motifs récurrents dans les données.
+            - **Résiduelle** : Permet d'identifier des anomalies ou des variations non expliquées par la tendance et la saisonnalité.
+             """)
 
 st.write("## 2.5 Cartographie des polluants")
 df_carte['iso_alpha'] = df_carte['Country_name'].map(country_iso_alpha_3)
-st.write(df_carte)
+df_carte['YearMonth'] = df_carte['Date'].dt.to_period('M')
+carte1, carte2 = st.columns([2, 2], gap='large')
+with carte1:
+    carte_fig1 = px.choropleth(
+        df_carte,
+        locations='iso_alpha',
+        color=f'{polluants_filter}',
+        hover_name='Country_name',
+        animation_frame='YearMonth',
+        hover_data={'aqi': True, 'iso_alpha': False},
+        projection='natural earth',
+        title=f'Répartition géographique des niveaux moyens de {polluants_filter} par pays',
+        color_continuous_scale= "Reds")
+    st.plotly_chart(carte_fig1, use_container_width=True)
+    
+with carte2:
+    # st.write("### Analyse spaiale de lapollutions de l'air")
+    carte_fig2 = px.scatter_geo(df_carte, locations='iso_alpha', color='aqi', hover_name='City',
+                     projection='orthographic', title='Répartition Géographique des Niveaux de Pollution')
+    st.plotly_chart(carte_fig2, use_container_width=True)
 
 
 st.write("<hr>", unsafe_allow_html=True)
@@ -148,10 +213,9 @@ st.write("## 3.1 Etude comparative: periode Pre-COVI vs Post-COVID ")
 # df_postcovid = df_city_covid.query("year >= 2020 & month >= 3")
 
 
-df_city_covid['YearMonth'] = df_city_covid['Date'].dt.to_period('M')
-df_city_covid['periode'] = ['post-covid' if date >= '2020-03' else 'pre-covid' for date in df_city_covid['YearMonth'].astype(str)]
-df_city_covid['YearMonth'] = df_city_covid['YearMonth'].astype(str)
-df_monthly_covid = df_city_covid.groupby(by=['YearMonth','periode']).mean(numeric_only=True)['aqi'].reset_index()
+df_city['periode'] = ['post-covid' if date >= '2020-03' else 'pre-covid' for date in df_city['YearMonth'].astype(str)]
+df_city['YearMonth'] = df_city['YearMonth'].astype(str)
+df_monthly_covid = df_city.groupby(by=['YearMonth','periode']).mean(numeric_only=True)['aqi'].reset_index()
 
 # precovid, postcovid = st.columns([2,2], gap='large')
 
@@ -177,9 +241,14 @@ df_monthly_continent = df_continent.groupby(by=['YearMonth', 'City']).mean(numer
 
 desc_ville, graphe_ville = st.columns([1, 2], gap='large')
 with desc_ville:
-    st.write("### Description des villes:")
-    for city in df_monthly_continent['City'].unique():
-        st.write(f"#### {city} / {get_city_description(city)}")
+    # st.write("### Description des villes:")
+    # for city in df_monthly_continent['City'].unique():
+    #     st.write(f"#### {city} / {get_city_description(city)}")
+    # df_continent_box = df.query("Continent_name == @continent_filter")
+    fig_box = px.box(df_continent, x='City', y=polluants_filter, title='Distribution des Niveaux de Pollution par Ville')
+    st.plotly_chart(fig_box,use_container_width=True)
+
+        
 with graphe_ville:
     st.write("### Courbes de comparaison:")
     fige_line_continent = px.line(df_monthly_continent, x='YearMonth', y='aqi', color='City', title=" ")
@@ -187,3 +256,20 @@ with graphe_ville:
     fige_line_continent.update_layout(title={'x': 0.5}, plot_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=True), yaxis=dict(showgrid=False))
     st.plotly_chart(fige_line_continent,use_container_width=True)
 # st.dataframe(df_continent)
+
+st.write("<hr>", unsafe_allow_html=True)
+st.write("# 4. Analyse de correlation: ")
+correlation_matrix = df1[['co', 'pm10', 'o3', 'so2', 'no2', 'pm25']].corr()
+
+# Créer une heatmap pour visualiser la matrice de corrélation
+corr_fig = ff.create_annotated_heatmap(
+    z=correlation_matrix.values,
+    x=correlation_matrix.columns.tolist(),
+    y=correlation_matrix.columns.tolist(),
+    colorscale='Viridis')
+fig.update_layout(
+    title='Matrice de Corrélation entre les Polluants',
+    xaxis_title='Polluants',
+    yaxis_title='Polluants'
+)
+st.plotly_chart(corr_fig,use_container_width=True)

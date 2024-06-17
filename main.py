@@ -6,6 +6,11 @@ import plotly.express as px
 import plotly.graph_objects as go
 from statsmodels.tsa.seasonal import seasonal_decompose
 import plotly.figure_factory as ff
+import datetime
+import locale
+import numpy as np
+
+locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
 
 # ------------------------
 villes = ['Lagos', 'Johannesburg', 'Accra', 'Abidjan', 'London', 'Paris', 'Milan', 'Los Angeles', 'New York', 'Mexico', 'São Paulo', 'Santiago', 'Beijing', 'Delhi', 'Tokyo']
@@ -35,19 +40,19 @@ with st.sidebar:
     st.write("# Parametres:")
     year_filter = st.selectbox(label = "Année:",
                                 options = df['year'].unique(),
-                                index= 9)
+                                index= 7)
     # month_filter = st.multiselect(label= "Mois:",
     #                         options = df['month_label'].unique(),
     #                         default =df['month_label'].unique())
     city_filter = st.selectbox(label= "Ville:",
                         options=df['City'].unique(),
-                        index= 5)
+                        index= 2)
     polluants_filter = st.selectbox(label = "Polluants:",
                                 options = ['pm25', 'pm10', 'o3', 'so2', 'no2', 'co'],
                                 index= 0)
-    meteo_filter = st.selectbox(label = "Variables météorologiques.:",
-                                options = ['temperature', 'humidité', 'pression atmosphérique'],
-                                index= 0)
+    # meteo_filter = st.selectbox(label = "Variables météorologiques.:",
+    #                             options = ['temperature', 'humidité', 'pression atmosphérique'],
+    #                             index= 0)
 
 df1 = df.query('year == @year_filter & City in @city_filter')
 df_city = df.query("City == @city_filter")
@@ -58,41 +63,83 @@ header_left,header_mid,header_right = st.columns([1,2,1],gap='large')
 with header_mid:
     st.write("# Analyse de la qualite de l'air")
 
+now = datetime.datetime.now()
+formatted_date = now.strftime("%d %B %Y à %Hh")
 st.write("<hr>", unsafe_allow_html=True)
-st.write("<h2>1. Vue de la qualité de l'air en temps réel</h3>", unsafe_allow_html=True)
-st.write("<p>Aujourd'hui <i>15 juin 2024 à 10h</i>.</p>", unsafe_allow_html=True)
+st.write(f"<h2>1. Niveau de pollution de l'air en temps réel: <i>{formatted_date}</i></h3>", unsafe_allow_html=True)
+
+# st.write(f"<p>Aujourd'hui <i>{formatted_date}</i>.</p>", unsafe_allow_html=True)
 
 if 'real_aqi_dict' not in st.session_state:
-    st.session_state['real_aqi_dict'] = {city_name:get_real_aqi(city_name) for city_name in ['Abidjan', 'London', 'New York', 'Delhi',]}
+    st.session_state['real_aqi_dict'] = {city_name:get_real_aqi(city_name) for city_name in ['Abidjan', 'London', 'New York', 'Delhi','Paris', 'Accra', 'Beijing', 'Johannesburg']}
     
-metric1, metric2, metric3, metric4 = st.columns(4, gap='large')
+metric1, metric2, metric3, metric4, metric5, metric6, metric7, metric8 = st.columns(8, gap='large')
 
 with metric1:
-    aqi_cat, icon = aqi_category(st.session_state.real_aqi_dict.get('Abidjan'))
-    # st.markdown('<div class="metric-column">', unsafe_allow_html=True)
-    st.write("### Abidjan")
-    st.image(f"images/{icon}", width=100)
-    st.metric(label="Cote d'Ivoire", value=st.session_state.real_aqi_dict.get('Abidjan'))
-    # st.markdown('</div>', unsafe_allow_html=True)
-
+    aqi_val = st.session_state.real_aqi_dict.get('Abidjan')
+    aqi_cat, icon, color = aqi_category(aqi_val)
+    st.write("#### Abidjan")
+    st.image(f"images/{icon}", width=50)
+    st.write(f'<div style="color:{color}; font-size:2.5em;">{aqi_val}</div>', unsafe_allow_html=True)
+    # st.write(label="Cote d'Ivoire")
+    # st.markdown('</div>', unsafe_allow_html=True)    
 with metric2:
-    aqi_cat, icon = aqi_category(st.session_state.real_aqi_dict.get('London'))
-    st.write("### London")
-    st.image(f"images/{icon}", width=100)
-    st.metric(label="Angleterre", value=st.session_state.real_aqi_dict.get('London'))
-
+    aqi_val = st.session_state.real_aqi_dict.get('Accra')
+    aqi_cat, icon, color = aqi_category(aqi_val)
+    st.write("#### Accra")
+    st.image(f"images/{icon}", width=50)
+    # st.write(label="Ghana", value=0)
+    st.write(f'<div style="color:{color}; font-size:2.5em;">{aqi_val}</div>', unsafe_allow_html=True)
+    
 with metric3:
-    aqi_cat, icon = aqi_category(st.session_state.real_aqi_dict.get('New York'))
-    st.write("### New York")
-    st.image(f"images/{icon}", width=100)
-    st.metric(label="Etat Unis d'Amerique", value=st.session_state.real_aqi_dict.get('New York'))
+    aqi_val = st.session_state.real_aqi_dict.get('Johannesburg')
+    aqi_cat, icon, color = aqi_category(aqi_val)
+    st.write("#### Johanesburg")
+    st.image(f"images/{icon}", width=50)
+    # st.metric(label="Afrique du Sud", value=st.session_state.real_aqi_dict.get('Johannesburg'))
+    st.write(f'<div style="color:{color}; font-size:2.5em;">{aqi_val}</div>', unsafe_allow_html=True)
     
 with metric4:
-    aqi_cat, icon = aqi_category(st.session_state.real_aqi_dict.get('Delhi'))
-    st.write("### Delhi")
-    st.image(f"images/{icon}", width=100)
-    st.metric(label="Inde", value=st.session_state.real_aqi_dict.get('Delhi'))
+    aqi_val = st.session_state.real_aqi_dict.get('London')
+    aqi_cat, icon, color = aqi_category(aqi_val)
+    st.write("#### London")
+    st.image(f"images/{icon}", width=50)
+    # st.metric(label="Angleterre", value=st.session_state.real_aqi_dict.get('London'))
+    st.write(f'<div style="color:{color}; font-size:2.5em;">{aqi_val}</div>', unsafe_allow_html=True)
+
+with metric5:
+    aqi_val = st.session_state.real_aqi_dict.get('Paris')
+    aqi_cat, icon, color = aqi_category(aqi_val)
+    st.write("#### Paris")
+    st.image(f"images/{icon}", width=50)
+    # st.metric(label="France", value=st.session_state.real_aqi_dict.get('Paris'))
+    st.write(f'<div style="color:{color}; font-size:2.5em;">{aqi_val}</div>', unsafe_allow_html=True)
+
+with metric6:
+    aqi_val = st.session_state.real_aqi_dict.get('New York')
+    aqi_cat, icon, color = aqi_category(aqi_val)
+    st.write("#### New York")
+    st.image(f"images/{icon}", width=50)
+    # st.metric(label="Etat Unis d'Amerique", value=st.session_state.real_aqi_dict.get('New York'))
+    st.write(f'<div style="color:{color}; font-size:2.5em;">{aqi_val}</div>', unsafe_allow_html=True)
     
+with metric7:
+    aqi_val = st.session_state.real_aqi_dict.get('Delhi')
+    aqi_cat, icon, color = aqi_category(aqi_val)
+    st.write("#### Delhi")
+    st.image(f"images/{icon}", width=50)
+    # st.metric(label="Inde", value=st.session_state.real_aqi_dict.get('Delhi'))
+    st.write(f'<div style="color:{color}; font-size:2.5em;">{aqi_val}</div>', unsafe_allow_html=True)
+    
+with metric8:
+    aqi_val = st.session_state.real_aqi_dict.get('Abidjan')
+    aqi_cat, icon, color = aqi_category(st.session_state.real_aqi_dict.get('Beijing'))
+    st.write("#### Beijing")
+    st.image(f"images/{icon}", width=50)
+    # st.metric(label="Chine", value=st.session_state.real_aqi_dict.get('Beijing'))
+    st.write(f'<div style="color:{color}; font-size:2.5em;">{aqi_val}</div>', unsafe_allow_html=True)
+    
+
 st.write("<hr>", unsafe_allow_html=True)
 st.write("# 2. Analyse: ")
 
@@ -125,7 +172,7 @@ with polluant1:
 
 with polluant2:    
     # df3 = df2.groupby(by=['year', 'month_label', 'specie']).max(numeric_only=True)['value'].reset_index()    
-    fige_line = px.line(df3, x='month', y=polluants_filter, title='<b>Pollutants Over Months</b>')
+    fige_line = px.line(df3, x='month', y=polluants_filter, title=f'<b>Evolution mensuelle des niveaux de {polluants_filter}</b>')
     fige_line.update_xaxes(rangeslider_visible=True)
     fige_line.update_layout(title={'x': 0.5}, plot_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=False), yaxis=dict(showgrid=False))
 
@@ -259,17 +306,42 @@ with graphe_ville:
 
 st.write("<hr>", unsafe_allow_html=True)
 st.write("# 4. Analyse de correlation: ")
-correlation_matrix = df1[['co', 'pm10', 'o3', 'so2', 'no2', 'pm25']].corr()
-
-# Créer une heatmap pour visualiser la matrice de corrélation
-corr_fig = ff.create_annotated_heatmap(
-    z=correlation_matrix.values,
-    x=correlation_matrix.columns.tolist(),
-    y=correlation_matrix.columns.tolist(),
-    colorscale='Viridis')
-fig.update_layout(
-    title='Matrice de Corrélation entre les Polluants',
-    xaxis_title='Polluants',
-    yaxis_title='Polluants'
-)
-st.plotly_chart(corr_fig,use_container_width=True)
+corr1, corr2 = st.columns([2, 2], gap='large')
+with corr1:
+    st.write("### Correlation entre polluants")
+    correlation_matrix = df1[['co', 'pm10', 'o3', 'so2', 'no2', 'pm25']].corr()
+    # correlation_values = np.round(correlation_matrix.values, 2)
+    corr_fig = ff.create_annotated_heatmap(
+        z=np.round(correlation_matrix.values, 2),
+        x=correlation_matrix.columns.tolist(),
+        y=correlation_matrix.columns.tolist(),
+        colorscale='Viridis')
+    fig.update_layout(
+        title='Matrice de Corrélation entre les Polluants',
+        xaxis_title='Polluants',
+        yaxis_title='Polluants'
+    )
+    st.plotly_chart(corr_fig,use_container_width=True)
+with corr2:
+    st.write("### Correlation entre polluants et variables meteorologique:")
+    col1, col2 = st.columns(2, gap='large')
+    with col1:
+        polluant = st.selectbox(label="polluant:",
+                            options=['co', 'pm10', 'o3', 'so2', 'no2', 'pm25'], index=0)
+    with col2:
+        meteo = st.selectbox(label="Varaible meteorologique:",
+                            options=['temperature', 'humidity', 'pressure'], index=0)
+    
+    df_melted = df1.melt(id_vars=['month'], 
+                    value_vars=[polluant, meteo], 
+                    var_name='specie', 
+                    value_name='value').groupby(by=['month', 'specie']).mean(numeric_only=True)['value'].reset_index()
+    # st.dataframe(df_melted)
+    fig_line_corr = px.line(df_melted, x='month', y='value', color='specie', title=" ")
+    fig_line_corr.update_xaxes(rangeslider_visible=True)
+    fig_line_corr.update_layout(title={'x': 0.5}, plot_bgcolor="rgba(0,0,0,0)", xaxis=dict(showgrid=True), yaxis=dict(showgrid=False))
+    st.plotly_chart(fig_line_corr,use_container_width=True)
+    
+c1, c2, c3 = st.columns([1,2,1], gap='large')
+with c2:
+    st.write("__________ **Copyright IDSI - 2024. by Thierry ZOMA & Achille BOUYE** __________")

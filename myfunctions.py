@@ -11,17 +11,17 @@ def get_real_aqi(city_name):
 
 def aqi_category(aqi):
     if aqi <= 50:
-        return 'Bon','like.png'
+        return 'Bon','like.png','green'
     elif aqi <= 100:
-        return 'Modere','mark.png'
+        return 'Modere','mark.png', 'yellow'
     elif aqi <= 150:
-        return 'malsain','sick.png'
+        return 'malsain','sick.png', 'orange'
     elif aqi <= 200:
-        return 'Mauvais','bad.png'
+        return 'Mauvais','bad.png', 'red'
     elif aqi <= 300:
-        return 'Tres mauvais','alarm.png'
+        return 'Tres mauvais','alarm.png', 'purple'
     else:
-        return 'Dangereux','sign.png'
+        return 'Dangereux','sign.png', 'maroon'
 
 def get_polluant_description(polluant):
     description = {

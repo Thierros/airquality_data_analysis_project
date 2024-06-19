@@ -132,7 +132,7 @@ with metric7:
     st.write(f'<div style="color:{color}; font-size:2.5em;">{aqi_val}</div>', unsafe_allow_html=True)
     
 with metric8:
-    aqi_val = st.session_state.real_aqi_dict.get('Abidjan')
+    aqi_val = st.session_state.real_aqi_dict.get('Beijing')
     aqi_cat, icon, color = aqi_category(st.session_state.real_aqi_dict.get('Beijing'))
     st.write("#### Beijing")
     st.image(f"images/{icon}", width=50)

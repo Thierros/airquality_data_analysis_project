@@ -253,7 +253,7 @@ with carte2:
 
 
 st.write("<hr>", unsafe_allow_html=True)
-st.write("# 3. Etude comparative et de correlation: ")
+st.write("# 3. Etude comparative:")
 
 st.write("## 3.1 Etude comparative: periode Pre-COVI vs Post-COVID ")
 # df_precovid = df_city_covid.query("year < 2020 & month < 3")

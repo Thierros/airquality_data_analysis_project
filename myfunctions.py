@@ -15,7 +15,7 @@ def aqi_category(aqi):
     elif aqi <= 100:
         return 'Modere','mark.png', '#ffc300'
     elif aqi <= 150:
-        return 'malsain','sick.png', 'orange'
+        return 'malsain','sick.png', '#fb5607'
     elif aqi <= 200:
         return 'Mauvais','bad.png', 'red'
     elif aqi <= 300:
